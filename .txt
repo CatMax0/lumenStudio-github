@@ -2,3 +2,7 @@
 https://klingai.com/document-api/apiReference/commonInfo
 Access Key: <set KLING_ACCESS_KEY env var>
 Secret Key: <set KLING_SECRET_KEY env var>
+
+
+硅基流动 sk-enzhboqkcufgjsokssncrqbhmogctunstjjnvjjgmlcsdjlu
+DEEPSEEK_API_KEY=sk-43083c5a40724983aaabbd4192fdd904
