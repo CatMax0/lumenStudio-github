@@ -18,9 +18,11 @@ export function ProjectsWorkspace() {
       if (api?.list) {
         const list = await api.list()
         setProjects(list)
+        setError('')
       }
     } catch (err) {
       console.error('[ProjectsWorkspace] Failed to list projects:', err)
+      setError(err instanceof Error ? err.message : '加载项目列表失败')
     }
   }
 
@@ -47,11 +49,13 @@ export function ProjectsWorkspace() {
 
   const handleOpen = async (id: string) => {
     setLoading(true)
+    setError('')
     try {
       await loadProjectById(id)
       setStage('worldbuilding') // jump to worldbuilding stage on load
     } catch (err) {
       console.error('[ProjectsWorkspace] Load project failed:', err)
+      setError(err instanceof Error ? err.message : '加载项目失败')
     } finally {
       setLoading(false)
     }
@@ -67,6 +71,7 @@ export function ProjectsWorkspace() {
       await refreshProjects()
     } catch (err) {
       console.error('[ProjectsWorkspace] Delete project failed:', err)
+      setError(err instanceof Error ? err.message : '删除项目失败')
     }
   }
 
@@ -78,6 +83,7 @@ export function ProjectsWorkspace() {
       }
     } catch (err) {
       console.error('[ProjectsWorkspace] Open dir failed:', err)
+      setError(err instanceof Error ? err.message : '打开目录失败')
     }
   }
 
@@ -102,6 +108,14 @@ export function ProjectsWorkspace() {
             打开工程根目录
           </button>
         </div>
+
+        {/* Global error banner */}
+        {error && (
+          <div className="flex items-center gap-2 p-3 bg-accent-danger/10 border border-accent-danger/30 rounded-sm">
+            <p className="text-xs text-accent-danger flex-1">{error}</p>
+            <button onClick={() => setError('')} className="text-accent-danger/60 hover:text-accent-danger text-xs cursor-pointer">✕</button>
+          </div>
+        )}
 
         {/* Column Grid: Create & Switch */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -4,7 +4,7 @@ import { useStage } from '../store/stage'
 import { STAGE_LABELS } from '../types/project'
 
 export function StatusBar() {
-  const { lastSavedAt, saveStatus, shots, chapters, providers } = useProject()
+  const { lastSavedAt, saveStatus, lastSaveError, shots, chapters, providers } = useProject()
   const { tasks } = useGenerate()
   const { stage } = useStage()
 
@@ -14,6 +14,12 @@ export function StatusBar() {
 
   const runningTasks = tasks.filter((t) => t.status === 'running' || t.status === 'queued').length
   const llmCount = providers.filter((p) => p.kind === 'llm' && p.enabled).length
+
+  const saveDisplay = saveStatus === 'saving'
+    ? '保存中…'
+    : saveStatus === 'error'
+      ? `保存失败: ${lastSaveError ?? '未知错误'}`
+      : savedText
 
   return (
     <footer className="h-6 shrink-0 flex items-center px-3 bg-panel border-t border-line text-2xs text-ink-mute font-mono">
@@ -25,8 +31,11 @@ export function StatusBar() {
       <Sep />
       <span>LLM {llmCount > 0 ? `${llmCount} 可用` : '未配置'}</span>
       <Sep />
-      <span title={lastSavedAt ? new Date(lastSavedAt).toLocaleString() : ''}>
-        {saveStatus === 'saving' ? '保存中…' : savedText}
+      <span
+        className={saveStatus === 'error' ? 'text-red-400' : ''}
+        title={saveStatus === 'error' ? (lastSaveError ?? '') : lastSavedAt ? new Date(lastSavedAt).toLocaleString() : ''}
+      >
+        {saveDisplay}
       </span>
       <span className="ml-auto flex items-center gap-3">
         <span>v0.1.0</span>

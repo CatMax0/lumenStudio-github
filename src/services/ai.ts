@@ -191,12 +191,17 @@ async function chatCompletionStreamFetch(
   const resp = await fetch(url, { method: 'POST', headers, body, signal })
   if (!resp.ok) {
     const text = await resp.text().catch(() => '')
-    callbacks.onError?.(new Error(`[AI] ${resp.status}: ${text.slice(0, 200)}`))
-    return
+    const err = new Error(`[AI] ${resp.status}: ${text.slice(0, 200)}`)
+    callbacks.onError?.(err)
+    throw err
   }
 
   const reader = resp.body?.getReader()
-  if (!reader) { callbacks.onError?.(new Error('[AI] No response body')); return }
+  if (!reader) {
+    const err = new Error('[AI] No response body')
+    callbacks.onError?.(err)
+    throw err
+  }
 
   const decoder = new TextDecoder()
   let buf = ''
@@ -218,7 +223,9 @@ async function chatCompletionStreamFetch(
           const parsed = JSON.parse(data)
           const delta = parsed.choices?.[0]?.delta?.content
           if (delta) { full += delta; callbacks.onToken?.(delta) }
-        } catch { /* skip */ }
+        } catch (parseErr) {
+          console.warn('[AI] skipping malformed SSE chunk:', data.slice(0, 120), parseErr)
+        }
       }
     }
     callbacks.onDone?.(full)

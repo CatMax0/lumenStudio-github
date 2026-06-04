@@ -518,6 +518,7 @@ function StoryboardRowCard({
                   onUpdate({ visualPrompt: result.content.trim() })
                 } catch (err) {
                   console.error('[StoryboardRowCard] failed to auto prompt:', err)
+                  alert(err instanceof Error ? err.message : '生成失败')
                 }
               }}
               className="text-[10px] text-accent hover:underline flex items-center gap-0.5 font-bold"
