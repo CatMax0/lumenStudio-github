@@ -26,11 +26,11 @@ export function RightPanel() {
 // ===== 世界观生成 =====
 function buildWorldBuildingContext(wb: WorldBuilding): string {
   const parts: string[] = []
-  if (wb.worldview) parts.push(`世界观与梗概: ${wb.worldview}`)
-  if (wb.characters) parts.push(`角色设定与关系: ${wb.characters}`)
-  if (wb.setting) parts.push(`场景与道具: ${wb.setting}`)
-  if (wb.style) parts.push(`风格与叙事规则: ${wb.style}`)
-  if (wb.constraints) parts.push(`限制与节奏: ${wb.constraints}`)
+  if (wb.synopsis) parts.push(`故事梗概: ${wb.synopsis}`)
+  if (wb.characters) parts.push(`角色设定: ${wb.characters}`)
+  if (wb.pace) parts.push(`节奏: ${wb.pace}`)
+  if (wb.totalEpisodes) parts.push(`总集数: ${wb.totalEpisodes}`)
+  if (wb.episodeMinutes) parts.push(`单集时长: ${wb.episodeMinutes} 分钟`)
   return parts.join('\n')
 }
 
@@ -62,14 +62,11 @@ function WorldBuildingAI() {
       const parsedWB = safeJsonParse(cleanedWB)
       
       if (parsedWB && typeof parsedWB === 'object') {
-        // 映射 AI 返回的结构化数据到新的 5 字段格式
-        const wbUpdate: Record<string, string> = {}
+        // 映射 AI 返回的结构化数据到精简后的故事背景字段 (故事梗概 / 角色设定)
+        const wbUpdate: Partial<WorldBuilding> = {}
         const p = parsedWB as Record<string, any>
-        wbUpdate.worldview = [p.worldview, p.synopsis].filter(Boolean).join('\n\n')
-        wbUpdate.characters = [p.characters, p.relationships].filter(Boolean).join('\n\n')
-        wbUpdate.setting = [p.setting, p.scenes, p.props].filter(Boolean).join('\n\n')
-        wbUpdate.style = [p.style, p.writingStyle, p.narrativeRules, p.cameraRules].filter(Boolean).join('\n\n')
-        wbUpdate.constraints = [p.constraints, p.forbiddenWords, p.pacingRules].filter(Boolean).join('\n\n')
+        wbUpdate.synopsis = [p.synopsis, p.worldview, p.stylesAndPacing].filter(Boolean).join('\n\n')
+        if (typeof p.characters === 'string') wbUpdate.characters = p.characters
         if (Array.isArray(parsedWB.characters)) {
           parsedWB.characters.forEach((c: any) => {
             addAsset({ 
@@ -99,30 +96,18 @@ function WorldBuildingAI() {
         }
 
         if (Array.isArray(parsedWB.props)) {
-          parsedWB.props.forEach((p: any) => {
-            addAsset({ name: p.name, category: 'prop', group: '默认', tags: [], description: p.description })
-
+          parsedWB.props.forEach((pr: any) => {
+            addAsset({ name: pr.name, category: 'prop', group: '默认', tags: [], description: pr.description })
           })
-
-          const pText = parsedWB.props.map((pr: any) => `${pr.name}: ${pr.description}`).join('\n')
-
-          wbUpdate.setting = [wbUpdate.setting, pText].filter(Boolean).join('\n\n')
-
         }
 
         if (Array.isArray(parsedWB.scenes)) {
           parsedWB.scenes.forEach((s: any) => {
             addAsset({ name: s.name, category: 'scene', group: '默认', tags: [], description: s.description })
-
           })
-
-          const sText = parsedWB.scenes.map((sc: any) => `${sc.name}: ${sc.description}`).join('\n')
-
-          wbUpdate.setting = [wbUpdate.setting, sText].filter(Boolean).join('\n\n')
-
         }
 
-        updateWorldBuilding(wbUpdate as Partial<WorldBuilding>)
+        updateWorldBuilding(wbUpdate)
       }
       setTokenInfo('故事背景完成，开始生成大纲...')
       setStreamText('故事背景生成完毕，正在生成大纲...')
@@ -177,7 +162,7 @@ function WorldBuildingAI() {
     } finally {
       setLoading(false)
     }
-  }, [provider, theme, genre, pace, extra, worldBuilding, updateWorldBuilding, addAsset, replaceActs, addChapter, updateChapter])
+  }, [provider, theme, genre, extra, worldBuilding, updateWorldBuilding, addAsset, replaceActs, addChapter, updateChapter])
 
   return (
     <>
@@ -258,7 +243,7 @@ function OutlineAI() {
     } finally {
       setLoading(false)
     }
-  }, [provider, theme, genre, pace, worldBuilding, extra, replaceActs])
+  }, [provider, theme, genre, worldBuilding, extra, replaceActs])
 
   const handleAbort = () => {
     abortRef.current?.abort()
@@ -603,7 +588,7 @@ function ChapterAI() {
 
 // ===== 分镜阶段: AI 分镜描述生成 =====
 function StoryboardAI() {
-  const { assets, providers, chapters, selectedChapterId, importShots, shots, updateShot, updateChapter, visualStyle, setVisualStyle } = useProject()
+  const { assets, providers, acts, chapters, selectedChapterId, importShots, shots, updateShot, updateChapter, visualStyle, setVisualStyle } = useProject()
   const { enqueue } = useGenerate()
   const llmProviders = providers.filter((p) => p.kind === 'llm' && p.enabled)
   const imageProviders = providers.filter((p) => p.kind === 'image' && p.enabled)
@@ -635,6 +620,7 @@ function StoryboardAI() {
   const imageProvider = imageProviders.find((p) => p.id === imageProviderId) ?? imageProviders[0]
   const videoProvider = videoProviders.find((p) => p.id === videoProviderId) ?? videoProviders[0]
   const ch = chapters.find((c) => c.id === selectedChapterId)
+  const parentAct = ch ? acts.find((a) => a.id === ch.actId) : undefined
 
   const handleGenerateFullStoryboard = useCallback(async () => {
     if (!llmProvider || !ch || !ch.synopsis) return
@@ -798,6 +784,18 @@ function StoryboardAI() {
     <>
       <PanelHeader title="AI 分镜" />
       <div className="flex-1 overflow-auto p-3 space-y-3">
+        <FieldGroup label="关联节点">
+          <div className="text-2xs text-ink p-2 bg-panel-deep border border-line space-y-1">
+            {ch ? (
+              <>
+                <div><span className="text-ink-dim">故事点: </span>{parentAct ? `${parentAct.index} · ${parentAct.title}` : '未关联'}</div>
+                <div><span className="text-ink-dim">章节: </span>{chapterLabel(ch)} {ch.title || '未命名章节'}</div>
+              </>
+            ) : (
+              <span className="text-ink-dim">请先在左侧选择章节</span>
+            )}
+          </div>
+        </FieldGroup>
         <FieldGroup label="LLM Provider">
           <ProviderSelect
             providers={llmProviders}
@@ -814,14 +812,14 @@ function StoryboardAI() {
               disabled={loading || !llmProvider || !ch?.synopsis}
               className="w-full h-8 bg-accent text-white text-xs font-semibold hover:bg-accent/80 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? '生成分镜中...' : '🎬 生成全集分镜'}
+              {loading ? '生成分镜中...' : '生成全集分镜'}
             </button>
             <button
               onClick={handleGenerateFullStoryboardImages}
               disabled={loading || !llmProvider || !ch}
               className="w-full h-8 bg-accent text-white text-xs font-semibold hover:bg-accent/80 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? '生成分镜画面中...' : '🎨 生成全集分镜画面'}
+              {loading ? '生成分镜画面中...' : '生成全集分镜画面'}
             </button>
           </div>
         </FieldGroup>
