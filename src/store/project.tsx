@@ -29,6 +29,7 @@ interface ProjectState extends Snapshot {
   selectedShotId: string | null
   // 保存状�?
   saveStatus: SaveStatus
+  lastSaveError: string | null
   lastSavedAt: number | null
 }
 
@@ -107,6 +108,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const [providers, setProviders] = useState<ModelProvider[]>([])
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null)
+  const [lastSaveError, setLastSaveError] = useState<string | null>(null)
   const [hydrated, setHydrated] = useState(false)
   const [projectLoaded, setProjectLoaded] = useState(false)
   const lastSerializedRef = useRef<string>('')
@@ -141,9 +143,11 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       lastSerializedRef.current = serialized
       setLastSavedAt(res.savedAt)
       setSaveStatus('saved')
+      setLastSaveError(null)
       if (typeof localStorage !== 'undefined') localStorage.setItem(ACTIVE_KEY, id)
     } catch (err) {
       console.error('[project] save failed:', err)
+      setLastSaveError(err instanceof Error ? err.message : String(err))
       setSaveStatus('error')
     }
   }, [id, name, buildSnapshot])
@@ -172,8 +176,13 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const manualBackupAction = useCallback(async () => {
     const lumen = (window as unknown as { lumen?: typeof window.lumen }).lumen
     if (!lumen?.project) return
-    await saveNow()
-    await lumen.project.backup(id)
+    try {
+      await saveNow()
+      await lumen.project.backup(id)
+    } catch (err) {
+      console.error('[project] manual backup failed:', err)
+      throw err
+    }
   }, [id, saveNow])
 
   const loadProjectById = useCallback(async (targetId: string) => {
@@ -389,7 +398,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const value: Ctx = {
-    id, name, projectLoaded, theme, genre, worldBuilding, saveStatus, lastSavedAt,
+    id, name, projectLoaded, theme, genre, worldBuilding, saveStatus, lastSaveError, lastSavedAt,
     acts, chapters, selectedActId, selectedChapterId, shots, selectedShotId, assets, providers, visualStyle,
     setName, setTheme, setGenre, setVisualStyle, saveNow, manualBackup: manualBackupAction,
     loadProjectById, createNewProject, deleteProjectById, closeProject,

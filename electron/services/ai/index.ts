@@ -152,8 +152,8 @@ export async function chatCompletionStream(
               full += delta
               onChunk(delta)
             }
-          } catch {
-            // skip malformed
+          } catch (parseErr) {
+            console.warn('[AI] skipping malformed SSE chunk:', data.slice(0, 120), parseErr)
           }
         }
       })
@@ -217,8 +217,8 @@ async function fetchJSON(url: string, opts: {
         }
         try {
           resolve(JSON.parse(responseBody))
-        } catch {
-          reject(new Error(`[AI] Invalid JSON response`))
+        } catch (parseErr) {
+          reject(new Error(`[AI] Invalid JSON response: ${responseBody.slice(0, 200)}`))
         }
       })
 

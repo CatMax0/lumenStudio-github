@@ -92,8 +92,8 @@ export async function saveProject(req: ProjectSaveRequestT): Promise<ProjectSave
     try {
       const existing = JSON.parse(await fs.readFile(filePath, 'utf8')) as { meta?: ProjectMetaT }
       if (existing?.meta?.createdAt) createdAt = existing.meta.createdAt
-    } catch {
-      // 损坏的旧文件: 不阻塞保存, 但触发自动备份
+    } catch (readErr) {
+      console.warn(`[projects] corrupted project file for ${req.id}, triggering backup:`, readErr)
       req = { ...req, createBackup: true }
     }
   }
@@ -194,7 +194,7 @@ async function trimBackups(id: string): Promise<void> {
     drop.map((b) =>
       fs
         .unlink(path.join(getProjectDir(id), BACKUP_DIR, `${b.id}.json`))
-        .catch(() => undefined)
+        .catch((unlinkErr) => console.warn(`[projects] failed to trim backup ${b.id}:`, unlinkErr))
     )
   )
 }
