@@ -484,7 +484,15 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     return id
   }, [])
   const updateAsset = useCallback((id: string, patch: Partial<AssetItem>) => {
-    setAssets((xs) => xs.map((x) => (x.id === id ? { ...x, ...patch } : x)))
+    setAssets((xs) => xs.map((x) => {
+      if (x.id !== id) return x
+      return {
+        ...x,
+        ...patch,
+        views: patch.views ? { ...x.views, ...patch.views } : x.views,
+        character: patch.character ? { ...x.character, ...patch.character } : x.character
+      }
+    }))
   }, [])
   const removeAsset = useCallback((id: string) => {
     setAssets((xs) => xs.filter((x) => x.id !== id))
