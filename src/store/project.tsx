@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react'
 import type { Chapter, Shot, AssetItem, ModelProvider, OutlineNode, WorldBuilding } from '../types/project'
 import { EMPTY_WORLD_BUILDING } from '../types/project'
+import { platformId, findPlatformApiKey } from '../utils/platform'
 
 const uid = () => Math.random().toString(36).slice(2, 10)
 const projectId = () => `p_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`
@@ -492,14 +493,38 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   // ---- Provider ----
   const addProvider = useCallback((p: Omit<ModelProvider, 'id'>): string => {
     const id = uid()
-    setProviders((xs) => [...xs, { ...p, id }])
+    setProviders((xs) => {
+      // 同平台（聚合平台）的模型默认共用已配置的 Key
+      const apiKey = p.apiKey || findPlatformApiKey(xs, p.baseUrl)
+      return [...xs, { ...p, apiKey, id }]
+    })
     return id
   }, [])
   const updateProvider = useCallback((id: string, patch: Partial<ModelProvider>) => {
     const clean = { ...patch }
     if (clean.apiKey !== undefined) clean.apiKey = clean.apiKey.trim()
     if (clean.baseUrl !== undefined) clean.baseUrl = clean.baseUrl.trim().replace(/\/+$/, '')
-    setProviders((xs) => xs.map((x) => (x.id === id ? { ...x, ...clean } : x)))
+    setProviders((xs) => {
+      const target = xs.find((x) => x.id === id)
+      if (!target) return xs
+      const merged = { ...target, ...clean }
+      // baseUrl 改成已知平台、且本模型还没填 Key 时，自动继承同平台的 Key
+      const baseUrlChanged = clean.baseUrl !== undefined
+      if (baseUrlChanged && clean.apiKey === undefined && !merged.apiKey) {
+        const inherited = findPlatformApiKey(xs, merged.baseUrl, id)
+        if (inherited) merged.apiKey = inherited
+      }
+      let next = xs.map((x) => (x.id === id ? merged : x))
+      // Key 变化时同步到同平台的其它模型，保持「同平台同 Key」
+      const keySourceChanged = clean.apiKey !== undefined || (baseUrlChanged && !target.apiKey)
+      const pid = platformId(merged.baseUrl)
+      if (merged.apiKey && keySourceChanged && pid) {
+        next = next.map((x) =>
+          x.id !== id && platformId(x.baseUrl) === pid ? { ...x, apiKey: merged.apiKey } : x
+        )
+      }
+      return next
+    })
   }, [])
   const removeProvider = useCallback((id: string) => {
     setProviders((xs) => xs.filter((x) => x.id !== id))
