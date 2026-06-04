@@ -4,6 +4,7 @@ import { MODEL_KIND_LABELS } from '../types/project'
 import type { ModelKind, ModelProvider } from '../types/project'
 import { PROVIDER_TEMPLATES } from '../data/providerTemplates'
 import { chatCompletion } from '../services/ai'
+import { platformId, samePlatformProviders } from '../utils/platform'
 import { NavItem, SectionLabel, Field } from './ui'
 
 const KINDS: ModelKind[] = ['llm', 'image', 'tts', 'stt', 'video', 'translate']
@@ -156,6 +157,7 @@ function ProviderSection({ kind }: { kind: ModelKind }) {
           <div className="bg-panel border border-line p-6 rounded-md shadow-sm">
             <ProviderEditor
               provider={editing}
+              siblings={samePlatformProviders(providers, editing)}
               onUpdate={(patch) => updateProvider(editing.id, patch)}
               onRemove={() => {
                 removeProvider(editing.id)
@@ -177,14 +179,17 @@ function ProviderSection({ kind }: { kind: ModelKind }) {
 // ===== Provider 编辑器 =====
 function ProviderEditor({
   provider,
+  siblings,
   onUpdate,
   onRemove
 }: {
   provider: ModelProvider
+  siblings: ModelProvider[]
   onUpdate: (patch: Partial<ModelProvider>) => void
   onRemove: () => void
 }) {
   const [showKey, setShowKey] = useState(false)
+  const pid = platformId(provider.baseUrl)
   const [modelInput, setModelInput] = useState('')
   const [voiceInput, setVoiceInput] = useState('')
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'ok' | 'fail'>('idle')
@@ -272,6 +277,20 @@ function ProviderEditor({
           className="w-full h-8 px-2 bg-panel-deep border border-line text-xs text-ink font-mono focus:border-accent focus:outline-none rounded-sm"
         />
       </Field>
+
+      {pid && (
+        <div className="-mt-1 flex items-start gap-2 px-2.5 py-2 bg-accent/5 border border-accent/15 rounded-sm text-[10px] text-ink-dim">
+          <span className="text-accent shrink-0">🔑</span>
+          <span>
+            <b className="text-ink">同平台共用 Key</b>：本服务属于平台 <span className="font-mono text-ink">{pid}</span>。
+            填写的 API Key 将默认同步给该平台下的全部模型
+            {siblings.length > 0 && (
+              <>（当前共 <b className="text-ink">{siblings.length}</b> 个同平台模型：{siblings.map((s) => s.name).join('、')}）</>
+            )}
+            ，无需为每个模型重复填写。
+          </span>
+        </div>
+      )}
 
       {isXunfei ? (
         <div className="space-y-4">
