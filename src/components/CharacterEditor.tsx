@@ -12,8 +12,6 @@ import type {
   ModelProvider
 } from '../types/project'
 
-type HeadViewKey = 'front' | 'side' | 'back'
-type FullBodyViewKey = 'fullBodyFront' | 'fullBodySide' | 'fullBodyBack'
 type CharacterViews = NonNullable<AssetItem['views']>
 
 const formatMediaPath = (path: string) => `lumen-media:///${path.replace(/\\/g, '/')}`
@@ -39,52 +37,20 @@ function buildCharacterSpec(name: string, profile: CharacterProfile) {
   ].filter(Boolean).join('\n')
 }
 
-function buildHeadSpec(name: string, profile: CharacterProfile) {
-  return [
-    `Character name / identity anchor: ${name || profile.alias || 'unnamed character'}`,
-    profile.age ? `age: ${profile.age}` : '',
-    `gender: ${genderPrompt(profile.gender)}`,
-    profile.identity ? `identity: ${profile.identity}` : '',
-    `FACE, HAIR AND HEAD DETAILS TO FOLLOW STRICTLY: ${valueOr(profile.appearance, 'highly specific facial structure, eyes, nose, lips, ears, skin tone, hairstyle and hairline')}`
-  ].filter(Boolean).join('\n')
-}
-
 const exactDesignRules = [
   'STRICT character design reference sheet, no random redesign, no alternate costume, no missing accessories.',
-  'Preserve the same face, hairstyle, age, body silhouette, clothing layers, fabric materials, colors, ornaments and signature props in every view.',
-  'Use clean neutral studio lighting, plain background, orthographic concept art, sharp edges, full detail visibility.'
+  'Preserve the same face, hairstyle, age, body silhouette, clothing layers, fabric materials, colors, ornaments and signature props in every panel.',
+  'Use clean neutral studio lighting, plain white background, orthographic concept art, sharp edges, full detail visibility.'
 ].join(' ')
 
-function buildHeadSheetPrompt(name: string, profile: CharacterProfile) {
-  return `Create a professional HEAD-ONLY character turnaround sheet with exactly three labeled views: FRONT VIEW, SIDE PROFILE VIEW, BACK VIEW OF HEAD. Focus only on face, skull shape, ears, hairline, hairstyle, eyebrows, eyes, nose, lips, jawline, skin details and any head scars/marks. Do not invent clothing, body silhouette or outfit details. ${exactDesignRules}\n${buildHeadSpec(name, profile)}\nMasterpiece character concept art, ultra detailed, production model sheet, white background.`
-}
-
-function buildHeadViewPrompt(name: string, profile: CharacterProfile, viewKey: HeadViewKey) {
-  const viewName = viewKey === 'front'
-    ? 'straight front head portrait'
-    : viewKey === 'side'
-      ? 'exact 90-degree side profile head portrait'
-      : 'back view of head portrait showing hair shape and nape'
-
-  return `Create one ${viewName} for the same character. Head and face only, no body outfit redesign. ${exactDesignRules}\n${buildHeadSpec(name, profile)}\nMasterpiece character concept art, ultra detailed, plain studio background.`
-}
-
-function buildFullBodyPrompt(name: string, profile: CharacterProfile) {
-  return `Create a single full-body character concept image, standing neutral pose, entire body visible from head to toe. The image must strictly follow both facial features and clothing descriptions with extreme precision. ${exactDesignRules}\n${buildCharacterSpec(name, profile)}\nInclude precise face, body proportions, hairstyle, outfit layering, textile material, seams, trims, footwear, accessories and signature props. Production-ready character design, realistic high-detail concept art, plain studio background.`
-}
-
-function buildFullBodySheetPrompt(name: string, profile: CharacterProfile) {
-  return `Create a professional FULL-BODY character turnaround sheet with exactly three labeled views: FRONT VIEW, SIDE VIEW, BACK VIEW. Full body must be visible head-to-toe in every view. The same face, hairstyle, body proportions, clothing layers, footwear, accessories and signature props must remain perfectly consistent between views. ${exactDesignRules}\n${buildCharacterSpec(name, profile)}\nUltra detailed production model sheet, orthographic pose, neutral expression, arms relaxed, plain white background.`
-}
-
-function buildFullBodyViewPrompt(name: string, profile: CharacterProfile, viewKey: FullBodyViewKey) {
-  const viewName = viewKey === 'fullBodyFront'
-    ? 'full-body straight front view'
-    : viewKey === 'fullBodySide'
-      ? 'full-body exact 90-degree side view'
-      : 'full-body straight back view'
-
-  return `Create one ${viewName}, head-to-toe, neutral standing pose. Strictly preserve the same face, hairstyle, body proportions, outfit layers, accessories, footwear and signature props. ${exactDesignRules}\n${buildCharacterSpec(name, profile)}\nPlain studio background, full detail visibility, production model sheet quality.`
+function buildReferenceSheetPrompt(name: string, profile: CharacterProfile) {
+  return `Create ONE single comprehensive CHARACTER REFERENCE SHEET (model sheet) image that merges everything below into one neatly arranged composition on a single plain white background:
+- TOP ROW — HEAD TURNAROUND: three head-and-shoulders portraits of the SAME character, labeled FRONT, SIDE PROFILE (exact 90°), BACK; focus on face structure, eyes, nose, lips, ears, jawline, skin, hairline and hairstyle.
+- MIDDLE ROW — FULL-BODY TURNAROUND: three head-to-toe standing views of the SAME character, labeled FRONT, SIDE (exact 90°), BACK; neutral relaxed A-pose, entire silhouette visible from head to toe.
+- BOTTOM — DETAIL CALLOUTS: close-up inset panels of the ACCESSORIES (jewelry, ornaments, signature props, weapons, bags, footwear) and the COSTUME / CLOTHING DETAILS (fabric texture, seams, trims, patterns, layering, fasteners).
+Every panel MUST depict the exact same person with identical face, hairstyle, age, body proportions, outfit, colors, materials and props — no redesign, no alternate costume, no missing accessory between panels. ${exactDesignRules}
+${buildCharacterSpec(name, profile)}
+Orthographic concept art, clean neutral studio lighting, sharp crisp lines, ultra-detailed production model sheet, plain white background, no extra text other than the short view labels.`
 }
 
 export function CharacterEditor({
@@ -98,12 +64,7 @@ export function CharacterEditor({
   const profile: CharacterProfile = asset.character ?? {}
 
   const imageProvider = useMemo(() => providers.find((p) => p.kind === 'image' && p.enabled), [providers])
-  const [generatingComplete, setGeneratingComplete] = useState(false)
-  const [generatingFullBody, setGeneratingFullBody] = useState(false)
   const [generatingSheet, setGeneratingSheet] = useState(false)
-  const [generatingViews, setGeneratingViews] = useState<Record<string, boolean>>({})
-  const [generatingFullBodySheet, setGeneratingFullBodySheet] = useState(false)
-  const [generatingFullBodyViews, setGeneratingFullBodyViews] = useState<Record<string, boolean>>({})
 
   const update = (patch: Partial<AssetItem>) => updateAsset(asset.id, patch)
   const updateProfile = (patch: Partial<CharacterProfile>) =>
@@ -114,12 +75,7 @@ export function CharacterEditor({
     const file = e.target.files?.[0]
     if (!file) return
     const localPath = (file as any).path || ""
-    if (localPath) {
-      updateViews({ sheetPath: formatMediaPath(localPath) })
-    } else {
-      const fallbackUrl = URL.createObjectURL(file)
-      updateViews({ sheetPath: fallbackUrl })
-    }
+    updateViews({ sheetPath: localPath ? formatMediaPath(localPath) : URL.createObjectURL(file) })
   }
 
   const handleGenerateSheet = async () => {
@@ -128,139 +84,16 @@ export function CharacterEditor({
     try {
       const result = await generateMedia({
         provider: imageProvider,
-        prompt: buildHeadSheetPrompt(asset.name, profile),
+        prompt: buildReferenceSheetPrompt(asset.name, profile),
         kind: 'image',
-        ratio: '2:1'
+        ratio: '4:3'
       })
-      
       updateViews({ sheetPath: formatMediaPath(result.path) })
     } catch (err) {
-      console.error('[CharacterEditor] failed to generate sheet:', err)
+      console.error('[CharacterEditor] failed to generate reference sheet:', err)
       alert(err instanceof Error ? err.message : '生成失败')
     } finally {
       setGeneratingSheet(false)
-    }
-  }
-
-  const handleImportView = (viewKey: HeadViewKey, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const localPath = (file as any).path || ""
-    if (localPath) {
-      updateViews({ [viewKey]: formatMediaPath(localPath) })
-    } else {
-      const fallbackUrl = URL.createObjectURL(file)
-      updateViews({ [viewKey]: fallbackUrl })
-    }
-  }
-
-  const handleGenerateView = async (viewKey: HeadViewKey) => {
-    if (!imageProvider || generatingViews[viewKey]) return
-    setGeneratingViews(prev => ({ ...prev, [viewKey]: true }))
-    try {
-      const result = await generateMedia({
-        provider: imageProvider,
-        prompt: buildHeadViewPrompt(asset.name, profile, viewKey),
-        kind: 'image',
-        ratio: '1:1'
-      })
-      
-      updateViews({ [viewKey]: formatMediaPath(result.path) })
-    } catch (err) {
-      console.error('[CharacterEditor] failed to generate view:', err)
-      alert(err instanceof Error ? err.message : '生成失败')
-    } finally {
-      setGeneratingViews(prev => ({ ...prev, [viewKey]: false }))
-    }
-  }
-
-  const handleImportFullBody = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const localPath = (file as any).path || ""
-    updateViews({ fullBody: localPath ? formatMediaPath(localPath) : URL.createObjectURL(file) })
-  }
-
-  const handleGenerateFullBody = async () => {
-    if (!imageProvider || generatingFullBody) return
-    setGeneratingFullBody(true)
-    try {
-      const result = await generateMedia({
-        provider: imageProvider,
-        prompt: buildFullBodyPrompt(asset.name, profile),
-        kind: 'image',
-        ratio: '2:3'
-      })
-      updateViews({ fullBody: formatMediaPath(result.path) })
-    } catch (err) {
-      console.error('[CharacterEditor] failed to generate full-body image:', err)
-      alert(err instanceof Error ? err.message : '生成失败')
-    } finally {
-      setGeneratingFullBody(false)
-    }
-  }
-
-  const handleImportFullBodySheet = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const localPath = (file as any).path || ""
-    updateViews({ fullBodySheetPath: localPath ? formatMediaPath(localPath) : URL.createObjectURL(file) })
-  }
-
-  const handleGenerateFullBodySheet = async () => {
-    if (!imageProvider || generatingFullBodySheet) return
-    setGeneratingFullBodySheet(true)
-    try {
-      const result = await generateMedia({
-        provider: imageProvider,
-        prompt: buildFullBodySheetPrompt(asset.name, profile),
-        kind: 'image',
-        ratio: '2:1'
-      })
-      updateViews({ fullBodySheetPath: formatMediaPath(result.path) })
-    } catch (err) {
-      console.error('[CharacterEditor] failed to generate full-body sheet:', err)
-      alert(err instanceof Error ? err.message : '生成失败')
-    } finally {
-      setGeneratingFullBodySheet(false)
-    }
-  }
-
-  const handleImportFullBodyView = (viewKey: FullBodyViewKey, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const localPath = (file as any).path || ""
-    updateViews({ [viewKey]: localPath ? formatMediaPath(localPath) : URL.createObjectURL(file) })
-  }
-
-  const handleGenerateFullBodyView = async (viewKey: FullBodyViewKey) => {
-    if (!imageProvider || generatingFullBodyViews[viewKey]) return
-    setGeneratingFullBodyViews(prev => ({ ...prev, [viewKey]: true }))
-    try {
-      const result = await generateMedia({
-        provider: imageProvider,
-        prompt: buildFullBodyViewPrompt(asset.name, profile, viewKey),
-        kind: 'image',
-        ratio: '2:3'
-      })
-      updateViews({ [viewKey]: formatMediaPath(result.path) })
-    } catch (err) {
-      console.error('[CharacterEditor] failed to generate full-body view:', err)
-      alert(err instanceof Error ? err.message : '生成失败')
-    } finally {
-      setGeneratingFullBodyViews(prev => ({ ...prev, [viewKey]: false }))
-    }
-  }
-
-  const handleGenerateCompleteCharacter = async () => {
-    if (!imageProvider || generatingComplete) return
-    setGeneratingComplete(true)
-    try {
-      await handleGenerateFullBody()
-      await handleGenerateSheet()
-      await handleGenerateFullBodySheet()
-    } finally {
-      setGeneratingComplete(false)
     }
   }
 
@@ -350,230 +183,17 @@ export function CharacterEditor({
             </Grid>
           </Section>
 
-          <Section title="全身单张三视角 (可分别重生成)">
-            <Grid cols={3}>
-              {(['fullBodyFront', 'fullBodySide', 'fullBodyBack'] as const).map((v) => (
-                <div key={v} className="space-y-1.5">
-                  <div className="text-2xs text-ink-dim text-center font-medium">
-                    {v === 'fullBodyFront' ? '全身正面' : v === 'fullBodySide' ? '全身侧面' : '全身背面'}
-                  </div>
-                  <div className="aspect-[2/3] bg-panel-deep border border-line flex flex-col items-center justify-center text-2xs text-ink-dim gap-2 overflow-hidden relative group rounded-sm">
-                    {asset.views?.[v] ? (
-                      <>
-                        <img src={asset.views[v].replace(/^file:\/\/\//, 'lumen-media:///')} className="w-full h-full object-contain" alt={v} />
-                        <div className="absolute inset-x-0 bottom-0 bg-black/80 py-1 text-center text-white translate-y-full group-hover:translate-y-0 transition-transform flex flex-col gap-1 items-center justify-center">
-                          <label className="text-[10px] text-accent hover:underline cursor-pointer">
-                            重新导入...
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => handleImportFullBodyView(v, e)}
-                            />
-                          </label>
-                          <button
-                            onClick={() => handleGenerateFullBodyView(v)}
-                            disabled={generatingFullBodyViews[v] || !imageProvider}
-                            className="text-[10px] text-accent hover:underline disabled:opacity-50"
-                          >
-                            {generatingFullBodyViews[v] ? '生成中...' : '重新生成'}
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="p-2 text-center flex flex-col items-center justify-center gap-2">
-                        <span>未导入 / 生成</span>
-                        <div className="flex flex-col gap-1 w-full">
-                          <label className="h-6 px-1.5 bg-panel border border-line text-[10px] hover:bg-panel-hover flex items-center justify-center cursor-pointer rounded-sm transition-colors">
-                            导入图片
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => handleImportFullBodyView(v, e)}
-                            />
-                          </label>
-                          <button
-                            onClick={() => handleGenerateFullBodyView(v)}
-                            disabled={generatingFullBodyViews[v] || !imageProvider}
-                            className="h-6 px-1.5 bg-accent/10 border border-accent/20 text-accent text-[10px] hover:bg-accent/20 disabled:opacity-50 rounded-sm transition-colors font-medium"
-                          >
-                            {generatingFullBodyViews[v] ? 'AI 生成...' : 'AI 自动生成'}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {generatingFullBodyViews[v] && (
-                      <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center text-white z-10">
-                        <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin mb-1" />
-                        <span className="text-[9px] animate-pulse">绘制中...</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </Grid>
-          </Section>
-
-          <Section title="全身三视图合集 (含身材服饰)">
+          <Section title="角色参考总图 (一张图：头部三视图 + 全身三视图 + 配饰 + 服装细节)">
             <div className="space-y-3">
               <p className="text-2xs text-ink-dim leading-relaxed">
-                生成包含正面、侧面、背面的全身模型表，严格保留同一套脸、发型、体型、服饰层次、材质、鞋履、配饰和标志物。
+                一键生成单张完整角色参考图，<b>合并在同一张图</b>中：「头部三视图（正/侧/背）」「全身三视图（正/侧/背）」以及「配饰」和「服装细节」特写。
+                提示词会严格锁定下方填写的五官、体型、发型、服饰材质、配饰和标志物，保证各视角同一套造型一致。
               </p>
-              
-              <div className="aspect-[2/1] w-full bg-panel-deep border border-line flex flex-col items-center justify-center text-2xs text-ink-dim gap-2 overflow-hidden relative group rounded-sm">
-                {asset.views?.fullBodySheetPath ? (
-                  <>
-                    <img src={asset.views.fullBodySheetPath.replace(/^file:\/\/\//, 'lumen-media:///')} className="w-full h-full object-contain" alt="全身三视图合集图" />
-                    <div className="absolute inset-x-0 bottom-0 bg-black/80 py-1.5 px-3 text-center text-white translate-y-full group-hover:translate-y-0 transition-transform flex items-center justify-center gap-3">
-                      <label className="text-2xs text-accent hover:underline cursor-pointer">
-                        📁 重新导入本地图...
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleImportFullBodySheet}
-                        />
-                      </label>
-                      <span className="text-line-soft">|</span>
-                      <button
-                        onClick={handleGenerateFullBodySheet}
-                        disabled={generatingFullBodySheet || !imageProvider}
-                        className="text-2xs text-accent hover:underline disabled:opacity-50"
-                      >
-                        {generatingFullBodySheet ? '生成中...' : '✨ 重新生成全身三视图'}
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <div className="p-4 text-center space-y-2.5">
-                    <div className="text-2xs text-ink-dim">尚未生成或导入全身三视图合集图</div>
-                    <div className="flex justify-center gap-2">
-                      <label className="h-7 px-3 bg-panel border border-line text-2xs text-ink hover:bg-panel-hover hover:text-accent cursor-pointer flex items-center rounded-sm transition-colors">
-                        📁 导入本地合集图...
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleImportFullBodySheet}
-                        />
-                      </label>
-                      <button
-                        onClick={handleGenerateFullBodySheet}
-                        disabled={generatingFullBodySheet || !imageProvider}
-                        className="h-7 px-3 bg-accent text-white text-2xs hover:bg-accent/80 disabled:opacity-50 disabled:cursor-not-allowed rounded-sm transition-colors flex items-center gap-1 font-medium"
-                      >
-                        {generatingFullBodySheet ? 'AI 正在绘制...' : '✨ AI 生成全身三视图'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-                
-                {generatingFullBodySheet && (
-                  <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center text-white z-10">
-                    <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin mb-2" />
-                    <p className="text-2xs font-semibold animate-pulse">AI 正在绘制全身一致性三视图...</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </Section>
 
-          <Section title="AI 一键生成角色形象包">
-            <div className="space-y-3">
-              <p className="text-2xs text-ink-dim leading-relaxed">
-                一次生成「全身形象」「头部三视图合集」「全身三视图合集」。提示词会严格锁定当前填写的五官、体型、发型、服饰材质、配饰和标志物。
-              </p>
-              {imageProvider ? (
-                <button
-                  onClick={handleGenerateCompleteCharacter}
-                  disabled={generatingComplete || generatingFullBody || generatingSheet || generatingFullBodySheet}
-                  className="h-8 px-4 bg-accent text-white text-xs hover:bg-accent/80 disabled:opacity-50 disabled:cursor-not-allowed rounded-sm transition-colors font-medium"
-                >
-                  {generatingComplete ? 'AI 正在生成完整角色形象包...' : '✨ 一键生成：全身形象 + 头部三视图 + 全身三视图'}
-                </button>
-              ) : (
-                <NoProviderHint kind="image" />
-              )}
-            </div>
-          </Section>
-
-          <Section title="全身形象 (严格遵循五官与服饰)">
-            <div className="space-y-3">
-              <p className="text-2xs text-ink-dim leading-relaxed">
-                用于锁定角色整体造型：头身比例、体型轮廓、默认服饰层次、材质、颜色、鞋履、配饰和标志物。
-              </p>
-              <div className="aspect-[2/3] max-w-sm bg-panel-deep border border-line flex flex-col items-center justify-center text-2xs text-ink-dim gap-2 overflow-hidden relative group rounded-sm">
-                {asset.views?.fullBody ? (
-                  <>
-                    <img src={asset.views.fullBody.replace(/^file:\/\/\//, 'lumen-media:///')} className="w-full h-full object-contain" alt="全身形象" />
-                    <div className="absolute inset-x-0 bottom-0 bg-black/80 py-1.5 px-3 text-center text-white translate-y-full group-hover:translate-y-0 transition-transform flex items-center justify-center gap-3">
-                      <label className="text-2xs text-accent hover:underline cursor-pointer">
-                        📁 重新导入...
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleImportFullBody}
-                        />
-                      </label>
-                      <span className="text-line-soft">|</span>
-                      <button
-                        onClick={handleGenerateFullBody}
-                        disabled={generatingFullBody || !imageProvider}
-                        className="text-2xs text-accent hover:underline disabled:opacity-50"
-                      >
-                        {generatingFullBody ? '生成中...' : '✨ 重新生成全身形象'}
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <div className="p-4 text-center space-y-2.5">
-                    <div className="text-2xs text-ink-dim">尚未生成或导入全身角色形象</div>
-                    <div className="flex justify-center gap-2">
-                      <label className="h-7 px-3 bg-panel border border-line text-2xs text-ink hover:bg-panel-hover hover:text-accent cursor-pointer flex items-center rounded-sm transition-colors">
-                        📁 导入图片...
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleImportFullBody}
-                        />
-                      </label>
-                      <button
-                        onClick={handleGenerateFullBody}
-                        disabled={generatingFullBody || !imageProvider}
-                        className="h-7 px-3 bg-accent text-white text-2xs hover:bg-accent/80 disabled:opacity-50 disabled:cursor-not-allowed rounded-sm transition-colors flex items-center gap-1 font-medium"
-                      >
-                        {generatingFullBody ? 'AI 绘制中...' : '✨ AI 生成全身形象'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {generatingFullBody && (
-                  <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center text-white z-10">
-                    <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin mb-2" />
-                    <p className="text-2xs font-semibold animate-pulse">AI 正在绘制全身形象...</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </Section>
-
-          {/* 五官/头部三视图合集 */}
-          <Section title="五官/头部三视图合集 (无关身材服饰)">
-            <div className="space-y-3">
-              <p className="text-2xs text-ink-dim leading-relaxed">
-                这是**无关身材和服饰**的纯脸部/头部多视角合集图（包含正面、侧面、背面/斜侧面等）。
-                该图专门用于维持角色在不同分镜画面中的**五官与面部特征一致性**，不随服饰体型变化而改变。
-              </p>
-              
-              <div className="aspect-[2/1] w-full bg-panel-deep border border-line flex flex-col items-center justify-center text-2xs text-ink-dim gap-2 overflow-hidden relative group rounded-sm">
+              <div className="aspect-[4/3] w-full bg-panel-deep border border-line flex flex-col items-center justify-center text-2xs text-ink-dim gap-2 overflow-hidden relative group rounded-sm">
                 {asset.views?.sheetPath ? (
                   <>
-                    <img src={asset.views.sheetPath.replace(/^file:\/\/\//, 'lumen-media:///')} className="w-full h-full object-contain" alt="五官三视图合集图" />
+                    <img src={asset.views.sheetPath.replace(/^file:\/\/\//, 'lumen-media:///')} className="w-full h-full object-contain" alt="角色参考总图" />
                     <div className="absolute inset-x-0 bottom-0 bg-black/80 py-1.5 px-3 text-center text-white translate-y-full group-hover:translate-y-0 transition-transform flex items-center justify-center gap-3">
                       <label className="text-2xs text-accent hover:underline cursor-pointer">
                         📁 重新导入本地图...
@@ -590,109 +210,46 @@ export function CharacterEditor({
                         disabled={generatingSheet || !imageProvider}
                         className="text-2xs text-accent hover:underline disabled:opacity-50"
                       >
-                        {generatingSheet ? '生成中...' : '✨ 重新生成合集图'}
+                        {generatingSheet ? '生成中...' : '✨ 重新生成参考总图'}
                       </button>
                     </div>
                   </>
                 ) : (
                   <div className="p-4 text-center space-y-2.5">
-                    <div className="text-2xs text-ink-dim">尚未生成或导入无身材服饰的五官三视图合集图</div>
-                    <div className="flex justify-center gap-2">
-                      <label className="h-7 px-3 bg-panel border border-line text-2xs text-ink hover:bg-panel-hover hover:text-accent cursor-pointer flex items-center rounded-sm transition-colors">
-                        📁 导入本地合集图...
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleImportSheet}
-                        />
-                      </label>
-                      <button
-                        onClick={handleGenerateSheet}
-                        disabled={generatingSheet || !imageProvider}
-                        className="h-7 px-3 bg-accent text-white text-2xs hover:bg-accent/80 disabled:opacity-50 disabled:cursor-not-allowed rounded-sm transition-colors flex items-center gap-1 font-medium"
-                      >
-                        {generatingSheet ? 'AI 正在绘制...' : '✨ AI 生成合集三视图'}
-                      </button>
-                    </div>
+                    <div className="text-2xs text-ink-dim">尚未生成或导入角色参考总图</div>
+                    {imageProvider ? (
+                      <div className="flex justify-center gap-2">
+                        <label className="h-7 px-3 bg-panel border border-line text-2xs text-ink hover:bg-panel-hover hover:text-accent cursor-pointer flex items-center rounded-sm transition-colors">
+                          📁 导入本地图...
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleImportSheet}
+                          />
+                        </label>
+                        <button
+                          onClick={handleGenerateSheet}
+                          disabled={generatingSheet || !imageProvider}
+                          className="h-7 px-3 bg-accent text-white text-2xs hover:bg-accent/80 disabled:opacity-50 disabled:cursor-not-allowed rounded-sm transition-colors flex items-center gap-1 font-medium"
+                        >
+                          {generatingSheet ? 'AI 正在绘制...' : '✨ AI 生成参考总图'}
+                        </button>
+                      </div>
+                    ) : (
+                      <NoProviderHint kind="image" />
+                    )}
                   </div>
                 )}
-                
+
                 {generatingSheet && (
                   <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center text-white z-10">
                     <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin mb-2" />
-                    <p className="text-2xs font-semibold animate-pulse">AI 正在绘制五官发型一致性合集图...</p>
+                    <p className="text-2xs font-semibold animate-pulse">AI 正在绘制角色参考总图...</p>
                   </div>
                 )}
               </div>
             </div>
-          </Section>
-
-          {/* 各视角多角度肖像 */}
-          <Section title="标准角色各视角肖像 (Portrait Turnarounds)">
-            <Grid cols={3}>
-              {(['front', 'side', 'back'] as const).map((v) => (
-                <div key={v} className="space-y-1.5">
-                  <div className="text-2xs text-ink-dim text-center font-medium">
-                    {v === 'front' ? '正面 (Front View)' : v === 'side' ? '侧面 (Side View)' : '背面 (Back View)'}
-                  </div>
-                  <div className="aspect-square bg-panel-deep border border-line flex flex-col items-center justify-center text-2xs text-ink-dim gap-2 overflow-hidden relative group rounded-sm">
-                    {asset.views?.[v] ? (
-                      <>
-                        <img src={asset.views[v].replace(/^file:\/\/\//, 'lumen-media:///')} className="w-full h-full object-contain" alt={v} />
-                        <div className="absolute inset-x-0 bottom-0 bg-black/80 py-1 text-center text-white translate-y-full group-hover:translate-y-0 transition-transform flex flex-col gap-1 items-center justify-center">
-                          <label className="text-[10px] text-accent hover:underline cursor-pointer">
-                            重新导入...
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => handleImportView(v, e)}
-                            />
-                          </label>
-                          <button
-                            onClick={() => handleGenerateView(v)}
-                            disabled={generatingViews[v] || !imageProvider}
-                            className="text-[10px] text-accent hover:underline disabled:opacity-50"
-                          >
-                            {generatingViews[v] ? '生成中...' : '重新生成'}
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="p-2 text-center flex flex-col items-center justify-center gap-2">
-                        <span>未导入 / 生成</span>
-                        <div className="flex flex-col gap-1 w-full">
-                          <label className="h-6 px-1.5 bg-panel border border-line text-[10px] hover:bg-panel-hover flex items-center justify-center cursor-pointer rounded-sm transition-colors">
-                            导入图片
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => handleImportView(v, e)}
-                            />
-                          </label>
-                          <button
-                            onClick={() => handleGenerateView(v)}
-                            disabled={generatingViews[v] || !imageProvider}
-                            className="h-6 px-1.5 bg-accent/10 border border-accent/20 text-accent text-[10px] hover:bg-accent/20 disabled:opacity-50 rounded-sm transition-colors font-medium"
-                          >
-                            {generatingViews[v] ? 'AI 生成...' : 'AI 自动生成'}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {generatingViews[v] && (
-                      <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center text-white z-10">
-                        <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin mb-1" />
-                        <span className="text-[9px] animate-pulse">绘制中...</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </Grid>
           </Section>
 
           {/* 外貌 */}
