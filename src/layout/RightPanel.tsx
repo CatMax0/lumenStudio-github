@@ -89,7 +89,16 @@ function WorldBuildingAI() {
           })
 
           // 同时生成角色描述文本，合并到 characters 字段
-          const chText = parsedWB.characters.map((c: any) => `${c.name}: ${c.description || c.background || ''}`).join('\n')
+          const chText = parsedWB.characters.map((c: any) => {
+            const details = [
+              c.identity ? `身份: ${c.identity}` : '',
+              c.appearance ? `外貌: ${c.appearance}` : '',
+              c.outfit ? `服饰: ${c.outfit}` : '',
+              c.personality ? `性格: ${c.personality}` : '',
+              c.background || c.description ? `背景: ${c.background || c.description}` : ''
+            ].filter(Boolean).join('；')
+            return `${c.name}: ${details}`
+          }).join('\n')
 
           wbUpdate.characters = [chText, p.relationships].filter(Boolean).join('\n\n')
 

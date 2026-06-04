@@ -257,6 +257,9 @@ export const PROMPTS = {
 题材: ${genre}
 ${extraInstructions ? `额外要求: ${extraInstructions}` : ''}
 
+请返回 JSON。角色相关字段必须极致精细，后续会直接用于 AI 生图和三视图一致性控制；不要写笼统词。
+角色 appearance 至少覆盖：体型/身高比例、脸型、额头、眉形、眼型/眼神、鼻梁/鼻尖、唇形、下颌/颧骨、耳朵、肤色/肌理、发型/发色/发量/发际线、疤痕/痣/纹身等可识别特征。
+角色 outfit 至少覆盖：内外层服装、版型剪裁、领口/袖口/下摆、面料材质、主辅色、纹样/刺绣/磨损、腰带/鞋履、首饰/护具/包袋/武器/标志物、穿戴方式和年代/职业风格。必须避免“漂亮衣服”“精致服饰”等空泛描述。
 请返回 JSON:
 {
   "synopsis": "故事梗概 (核心剧情发展线)",
@@ -266,8 +269,8 @@ ${extraInstructions ? `额外要求: ${extraInstructions}` : ''}
       "age": "年龄",
       "gender": "male|female|neutral|unknown",
       "identity": "身份/职业",
-      "appearance": "详细外貌 (体型、发型、面容 — 用于生图一致性)",
-      "outfit": "默认穿着",
+      "appearance": "极致详细外貌 (体型、身高比例、脸型、五官、肤色、发型、可识别标记 — 用于生图一致性)",
+      "outfit": "极致详细默认穿着 (服装层次、剪裁、材质、颜色、纹样、鞋履、配饰、标志物)",
       "personality": "性格/口头禅",
       "background": "经历与动机"
     }
@@ -357,6 +360,7 @@ ${extraInstructions ? `额外要求: ${extraInstructions}` : ''}
 ${style && VISUAL_STYLE_PROMPTS[style as keyof typeof VISUAL_STYLE_PROMPTS] ? `\n【重要：画面风格必须严格统一为：${style} 风格】\n统一风格基调和画面渲染特征定义：\n${VISUAL_STYLE_PROMPTS[style as keyof typeof VISUAL_STYLE_PROMPTS]}` : ''}
 
 对于每个镜头的 "visualPrompt"（画面生图描述，英文），你必须使用【极致详细通用结构】来构建，以实现极高的画面信息密度。
+如果剧本文本或世界观中出现角色五官、发型、体型、服饰、材质、配饰、标志物，visualPrompt 必须逐项保留并翻译成英文，不得用笼统词替代，不得随机更换服装或外貌。
 提示词结构公式：
 【Subject Identity 主体身份 & Age/Gender】+【Appearance & Face/Hair details 外貌】+【Emotion/Mood 情绪状态】+【Pose/Action 具体动作姿态】+【Costume & Materials 服饰材质】+【Environment/Scene 场景环境细节】+【Time/Weather 时间天气】+【Lighting & Source/Direction 光线光影】+【Camera & Angle/Composition 镜头构图机位】+【Colors/Color Palette 色彩调性】+【Dynamic Elements 动态元素】+【Atmosphere 氛围感】+【Style & Quality words 电影感写实风格与画质词】
 
@@ -415,6 +419,7 @@ ${style && VISUAL_STYLE_PROMPTS[style as keyof typeof VISUAL_STYLE_PROMPTS] ? `\
 ${style && VISUAL_STYLE_PROMPTS[style as keyof typeof VISUAL_STYLE_PROMPTS] ? `\n【重要：画面风格必须严格统一为：${style} 风格】\n统一风格基调和画面渲染特征定义：\n${VISUAL_STYLE_PROMPTS[style as keyof typeof VISUAL_STYLE_PROMPTS]}` : ''}
 
 【极重要：生成提示词时，必须严格、完整地将上述对应角色的“外貌特征”、“服饰装扮”默认设定以及场景的“默认设定”翻译成英文并融合到画面细节中，以维持角色和场景在整个系列中的极高画风一致性！】
+不要改写、替换、遗漏或随机发明五官、发型、体型、服装层次、材质、颜色、鞋履、配饰、武器/标志物。若镜头动作与默认服装冲突，以默认人设/服饰为准，只调整姿态、表情、光线和构图。
 
 你必须使用【极致详细通用结构】来撰写，不要使用苍白的词汇堆砌，而是构建画面层层细节，让 AI 能够理解光影、镜头、情绪和电影语言。
 提示词结构公式：

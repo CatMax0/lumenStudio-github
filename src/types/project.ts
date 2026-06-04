@@ -221,10 +221,15 @@ export interface AssetItem {
   tags: string[]
   // 三视图路径 (人物/场景/道具)
   views?: {
-    front?: string
-    side?: string
-    back?: string
-    sheetPath?: string // 合集三视图 (无关身材服饰)
+    front?: string // 头部正面
+    side?: string // 头部侧面
+    back?: string // 头部背面
+    sheetPath?: string // 头部合集三视图 (无关身材服饰)
+    fullBody?: string // 全身角色形象
+    fullBodyFront?: string // 全身正面
+    fullBodySide?: string // 全身侧面
+    fullBodyBack?: string // 全身背面
+    fullBodySheetPath?: string // 全身合集三视图 (含身材服饰)
   }
   // 音频路径 (音效/BGM)
   audioPath?: string
