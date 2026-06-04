@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useProject } from '../store/project'
 import { useStage } from '../store/stage'
+import { formatDate } from '../utils/formatDate'
 import type { ProjectMetaT } from '@shared/ipc'
 
 export function ProjectsWorkspace() {
@@ -80,10 +81,7 @@ export function ProjectsWorkspace() {
     }
   }
 
-  const formatDate = (ts: number) => {
-    const d = new Date(ts)
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-  }
+
 
   return (
     <div className="flex-1 overflow-auto bg-panel-deep p-6 md:p-8 flex justify-center select-text">

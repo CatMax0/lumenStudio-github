@@ -1,4 +1,6 @@
 import type { ModelProvider } from '../types/project'
+import { uid } from '../utils/uid'
+import { toProviderConfig } from '../utils/provider'
 
 // ===== Types =====
 
@@ -39,20 +41,6 @@ function getLumenApi() {
     onStreamError: (cb: (data: { requestId: string; error: string }) => void) => () => void
   } } }).lumen?.ai
 }
-
-function toProviderConfig(p: ModelProvider) {
-  return {
-    kind: p.kind,
-    name: p.name,
-    baseUrl: p.baseUrl,
-    apiKey: p.apiKey,
-    models: p.models,
-    defaultModel: p.defaultModel,
-    headers: p.headers
-  }
-}
-
-const uid = () => Math.random().toString(36).slice(2, 10)
 
 // ===== Non-streaming chat =====
 

@@ -1,16 +1,5 @@
 import type { ModelProvider } from '../types/project'
-
-function toProviderConfig(p: ModelProvider) {
-  return {
-    kind: p.kind,
-    name: p.name,
-    baseUrl: p.baseUrl,
-    apiKey: p.apiKey,
-    models: p.models,
-    defaultModel: p.defaultModel,
-    headers: p.headers
-  }
-}
+import { toProviderConfig } from '../utils/provider'
 
 export async function generateMedia(opts: {
   provider: ModelProvider
