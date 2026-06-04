@@ -26,11 +26,11 @@ export function TitleBar() {
         <SaveStatusBadge status={saveStatus} />
       </div>
 
-      {/* 管线阶段导航 */}
+      {/* 管线阶段导航 (项目管理为启动界面, 不在编辑器管线内) */}
       <nav className="flex items-stretch app-no-drag">
-        {STAGES.map((s, i) => {
+        {STAGES.filter((s) => s !== 'projects').map((s, i) => {
           const active = s === stage
-          const locked = s !== 'projects' && s !== 'settings' && !projectLoaded
+          const locked = s !== 'settings' && !projectLoaded
           return (
             <button
               key={s}

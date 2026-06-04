@@ -3,7 +3,7 @@ import { useStage } from '../store/stage'
 import { useProject } from '../store/project'
 import { useGenerate } from '../store/generate'
 import { CAMERA_LABELS, chapterLabel } from '../types/project'
-import type { OutlineNode, Shot, WorldBuilding } from '../types/project'
+import type { OutlineNode, Shot } from '../types/project'
 import { RefTextArea } from '../components/RefTextArea'
 import { LibraryWorkspace } from '../components/LibraryWorkspace'
 import { SettingsWorkspace } from '../components/SettingsWorkspace'
@@ -37,29 +37,31 @@ export function CenterPanel() {
   )
 }
 
-// ===== 世界观工作区 =====
-const WB_FIELDS: { key: keyof WorldBuilding; label: string; rows: number; placeholder: string }[] = [
-  { key: 'worldview', label: '世界观', rows: 5, placeholder: '故事的世界背景设定、规则、力量体系与核心剧情发展线...' },
-  { key: 'characters', label: '角色设定', rows: 5, placeholder: '主要角色的姓名、身份、外貌、性格，以及人物之间的关系网...' },
-  { key: 'setting', label: '场景与道具', rows: 4, placeholder: '故事中的关键场景（环境、氛围）与重要道具（外观、功能）...' },
-  { key: 'style', label: '风格与叙事', rows: 3, placeholder: '文风特点、叙事视角规则、镜头运镜风格...' },
-  { key: 'constraints', label: '限制与节奏', rows: 3, placeholder: '不应出现的词汇表达，以及剧情的节奏要求...' }
-]
-
+// ===== 故事背景工作区 (精简版) =====
 function WorldBuildingWorkspace() {
   const { worldBuilding, updateWorldBuilding, theme, setTheme, genre, setGenre } = useProject()
 
   return (
     <>
-      <WorkspaceHeader title="故事背景" subtitle="定义故事核心梗概, 角色/场景/道具将自动提取为素材库资产" />
+      <WorkspaceHeader title="故事背景" subtitle="只保留必要设置：故事梗概 / 集数 / 时长 / 角色设定" />
       <div className="flex-1 overflow-auto p-4">
         <div className="max-w-3xl space-y-4">
-          <FieldGroup label="故事主题">
-            <textarea
+          <FieldGroup label="故事主题 (一句话)">
+            <input
               value={theme}
               onChange={(e) => setTheme(e.target.value)}
-              className="w-full h-20 p-3 bg-panel border border-line text-xs text-ink resize-none focus:border-accent focus:outline-none"
-              placeholder="输入故事主题、核心冲突、目标受众..."
+              className="w-full h-7 px-2 bg-panel border border-line text-xs text-ink focus:border-accent focus:outline-none"
+              placeholder="用一句话概括故事的核心主题 / 核心冲突..."
+            />
+          </FieldGroup>
+
+          <FieldGroup label="故事梗概">
+            <textarea
+              value={worldBuilding.synopsis}
+              onChange={(e) => updateWorldBuilding({ synopsis: e.target.value })}
+              rows={6}
+              className="w-full p-3 bg-panel border border-line text-xs text-ink resize-none focus:border-accent focus:outline-none leading-relaxed"
+              placeholder="故事的核心剧情发展线：起因、主要冲突、走向与结局..."
             />
           </FieldGroup>
 
@@ -85,17 +87,39 @@ function WorldBuildingWorkspace() {
             </FieldGroup>
           </div>
 
-          {WB_FIELDS.map((f) => (
-            <FieldGroup key={f.key} label={f.label}>
-              <textarea
-                value={worldBuilding[f.key]}
-                onChange={(e) => updateWorldBuilding({ [f.key]: e.target.value })}
-                rows={f.rows}
-                className="w-full p-3 bg-panel border border-line text-xs text-ink resize-none focus:border-accent focus:outline-none"
-                placeholder={f.placeholder}
+          <div className="grid grid-cols-2 gap-3">
+            <FieldGroup label="总集数">
+              <input
+                type="number"
+                min={1}
+                value={worldBuilding.totalEpisodes}
+                onChange={(e) => updateWorldBuilding({ totalEpisodes: parseInt(e.target.value, 10) || 0 })}
+                className="w-full h-7 px-2 bg-panel border border-line text-xs text-ink focus:border-accent focus:outline-none"
+                placeholder="如 12"
               />
             </FieldGroup>
-          ))}
+            <FieldGroup label="单集时长 (分钟)">
+              <input
+                type="number"
+                min={0}
+                step={0.5}
+                value={worldBuilding.episodeMinutes}
+                onChange={(e) => updateWorldBuilding({ episodeMinutes: parseFloat(e.target.value) || 0 })}
+                className="w-full h-7 px-2 bg-panel border border-line text-xs text-ink focus:border-accent focus:outline-none"
+                placeholder="如 2"
+              />
+            </FieldGroup>
+          </div>
+
+          <FieldGroup label="角色设定">
+            <textarea
+              value={worldBuilding.characters}
+              onChange={(e) => updateWorldBuilding({ characters: e.target.value })}
+              rows={6}
+              className="w-full p-3 bg-panel border border-line text-xs text-ink resize-none focus:border-accent focus:outline-none leading-relaxed"
+              placeholder="主要角色：姓名 / 身份 / 外貌 / 性格 / 人物关系..."
+            />
+          </FieldGroup>
         </div>
       </div>
     </>

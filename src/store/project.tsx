@@ -20,14 +20,14 @@ interface Snapshot {
 }
 
 interface ProjectState extends Snapshot {
-  // 项目�?
+  // 项目元信息
   id: string
   name: string
   projectLoaded: boolean
   selectedActId: string | null
   selectedChapterId: string | null
   selectedShotId: string | null
-  // 保存状�?
+  // 保存状态
   saveStatus: SaveStatus
   lastSavedAt: number | null
 }
@@ -44,7 +44,7 @@ interface ProjectActions {
   createNewProject: (name: string) => Promise<void>
   deleteProjectById: (id: string) => Promise<void>
   closeProject: () => void
-  // 世界�?
+  // 世界观
   updateWorldBuilding: (patch: Partial<WorldBuilding>) => void
   // 大纲
   addAct: () => void
@@ -80,11 +80,11 @@ const ProjectCtx = createContext<Ctx | null>(null)
 
 const ACTIVE_KEY = 'lumen.activeProjectId'
 
-const DEFAULT_ACTS: OutlineNode[] = [
-  { id: uid(), index: 1, title: '故事�?1 · 开�?, summary: '', goal: '' },
-  { id: uid(), index: 2, title: '故事�?2 · 冲突', summary: '', goal: '' },
-  { id: uid(), index: 3, title: '故事�?3 · 高潮', summary: '', goal: '' },
-  { id: uid(), index: 4, title: '故事�?4 · 结局', summary: '', goal: '' }
+const makeDefaultActs = (): OutlineNode[] => [
+  { id: uid(), index: 1, title: '故事点 1 · 开端', summary: '', goal: '' },
+  { id: uid(), index: 2, title: '故事点 2 · 冲突', summary: '', goal: '' },
+  { id: uid(), index: 3, title: '故事点 3 · 高潮', summary: '', goal: '' },
+  { id: uid(), index: 4, title: '故事点 4 · 结局', summary: '', goal: '' }
 ]
 
 export function ProjectProvider({ children }: { children: React.ReactNode }) {
@@ -92,12 +92,12 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(ACTIVE_KEY) : null
     return saved ?? projectId()
   })
-  const [name, setNameState] = useState<string>('未命名项�?)
+  const [name, setNameState] = useState<string>('未命名项目')
   const [theme, setThemeState] = useState<string>('')
   const [genre, setGenreState] = useState<string>('都市')
-    const [visualStyle, setVisualStyleState] = useState<string>('realistic')
+  const [visualStyle, setVisualStyleState] = useState<string>('realistic')
   const [worldBuilding, setWorldBuilding] = useState<WorldBuilding>(EMPTY_WORLD_BUILDING)
-  const [acts, setActs] = useState<OutlineNode[]>(DEFAULT_ACTS)
+  const [acts, setActs] = useState<OutlineNode[]>(makeDefaultActs)
   const [chapters, setChapters] = useState<Chapter[]>([])
   const [selectedActId, setSelectedActId] = useState<string | null>(null)
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null)
@@ -115,14 +115,14 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const setName = useCallback((n: string) => setNameState(n), [])
   const setTheme = useCallback((v: string) => setThemeState(v), [])
   const setGenre = useCallback((v: string) => setGenreState(v), [])
-    const setVisualStyle = useCallback((v: string) => setVisualStyleState(v), [])
+  const setVisualStyle = useCallback((v: string) => setVisualStyleState(v), [])
 
-  // ---- 初始加载: 仅标�?hydrated, 不自动加载项�?----
+  // ---- 初始加载: 仅标记 hydrated, 不自动加载项目 ----
   useEffect(() => {
     setHydrated(true)
   }, [])
 
-  // ---- 自动保存 (变更�?1.5s 防抖) ----
+  // ---- 自动保存 (变更后 1.5s 防抖) ----
   const buildSnapshot = useCallback((): Snapshot => ({
     theme, genre, worldBuilding, acts, chapters, shots, assets, providers, visualStyle
   }), [theme, genre, worldBuilding, acts, chapters, shots, assets, providers, visualStyle])
@@ -152,7 +152,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!hydrated || !projectLoaded) return
     const snap = buildSnapshot()
-    const serialized = JSON.stringify({ name, ...snap })
+    const serialized = JSON.stringify(snap)
     if (serialized === lastSerializedRef.current && lastSerializedRef.current !== '') return
     setSaveStatus((s) => (s === 'saving' ? s : 'dirty'))
     if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current)
@@ -183,20 +183,128 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
 
       setSaveStatus('saving')
       const { meta, data } = await lumen.project.load(targetId)
-      const snap = data as Partial<Snapshot>
-      
+      const snap = (data || {}) as Partial<Snapshot>
+
+      const loadedActs = snap.acts && snap.acts.length ? snap.acts : makeDefaultActs()
+      const loaded: Snapshot = {
+        theme: snap.theme || '',
+        genre: snap.genre || '都市',
+        worldBuilding: snap.worldBuilding || EMPTY_WORLD_BUILDING,
+        acts: loadedActs,
+        chapters: snap.chapters || [],
+        shots: snap.shots || [],
+        assets: snap.assets || [],
+        providers: snap.providers || [],
+        visualStyle: snap.visualStyle || 'realistic'
+      }
+
       setId(meta.id)
       setNameState(meta.name)
-      setThemeState(snap.theme || '')
-      setGenreState(snap.genre || '都市')
-      setVisualStyleState(snap.visualStyle || 'realistic')
-                  setWorldBuilding(snap.worldBuilding || EMPTY_WORLD_BUILDING)
-        const updateAct = useCallback((id: string, patch: Partial<OutlineNode>) => {
+      setThemeState(loaded.theme)
+      setGenreState(loaded.genre)
+      setVisualStyleState(loaded.visualStyle || 'realistic')
+      setWorldBuilding(loaded.worldBuilding)
+      setActs(loaded.acts)
+      setChapters(loaded.chapters)
+      setShots(loaded.shots)
+      setAssets(loaded.assets)
+      setProviders(loaded.providers)
+      setSelectedActId(null)
+      setSelectedChapterId(null)
+      setSelectedShotId(null)
+
+      // 与 performSave 的序列化一致, 避免加载后立即触发一次冗余写盘
+      lastSerializedRef.current = JSON.stringify(loaded)
+      setLastSavedAt(meta.updatedAt)
+      setProjectLoaded(true)
+      setSaveStatus('saved')
+      if (typeof localStorage !== 'undefined') localStorage.setItem(ACTIVE_KEY, meta.id)
+    } catch (err) {
+      console.error('[project] load failed:', err)
+      setSaveStatus('error')
+      throw err
+    }
+  }, [])
+
+  const createNewProject = useCallback(async (newName: string) => {
+    const lumen = (window as unknown as { lumen?: typeof window.lumen }).lumen
+    const newId = projectId()
+    const snap: Snapshot = {
+      theme: '',
+      genre: '都市',
+      worldBuilding: EMPTY_WORLD_BUILDING,
+      acts: makeDefaultActs(),
+      chapters: [],
+      shots: [],
+      assets: [],
+      // 模型配置沿用当前已配置的 Provider, 避免每个新项目都要重新配置
+      providers,
+      visualStyle: 'realistic'
+    }
+
+    if (lumen?.project) {
+      const res = await lumen.project.save({ id: newId, name: newName, data: snap, createBackup: false })
+      setLastSavedAt(res.savedAt)
+    }
+
+    setId(newId)
+    setNameState(newName)
+    setThemeState(snap.theme)
+    setGenreState(snap.genre)
+    setVisualStyleState('realistic')
+    setWorldBuilding(snap.worldBuilding)
+    setActs(snap.acts)
+    setChapters(snap.chapters)
+    setShots(snap.shots)
+    setAssets(snap.assets)
+    setSelectedActId(null)
+    setSelectedChapterId(null)
+    setSelectedShotId(null)
+
+    lastSerializedRef.current = JSON.stringify(snap)
+    setProjectLoaded(true)
+    setSaveStatus('saved')
+    if (typeof localStorage !== 'undefined') localStorage.setItem(ACTIVE_KEY, newId)
+  }, [providers])
+
+  const deleteProjectById = useCallback(async (targetId: string) => {
+    const lumen = (window as unknown as { lumen?: typeof window.lumen }).lumen
+    if (lumen?.project) {
+      await lumen.project.delete(targetId)
+    }
+    if (targetId === id) {
+      setProjectLoaded(false)
+      if (typeof localStorage !== 'undefined') localStorage.removeItem(ACTIVE_KEY)
+    }
+  }, [id])
+
+  const closeProject = useCallback(() => {
+    setProjectLoaded(false)
+    setSelectedActId(null)
+    setSelectedChapterId(null)
+    setSelectedShotId(null)
+    setSaveStatus('idle')
+    lastSerializedRef.current = ''
+    if (typeof localStorage !== 'undefined') localStorage.removeItem(ACTIVE_KEY)
+  }, [])
+
+  // ---- 世界观 ----
+  const updateWorldBuilding = useCallback((patch: Partial<WorldBuilding>) => {
+    setWorldBuilding((wb) => ({ ...wb, ...patch }))
+  }, [])
+
+  // ---- 大纲 ----
+  const addAct = useCallback(() => {
+    setActs((xs) => [...xs, { id: uid(), index: xs.length + 1, title: '', summary: '', goal: '' }])
+  }, [])
+  const updateAct = useCallback((id: string, patch: Partial<OutlineNode>) => {
     setActs((xs) => xs.map((x) => (x.id === id ? { ...x, ...patch } : x)))
   }, [])
   const removeAct = useCallback((id: string) => {
     setActs((xs) => xs.filter((x) => x.id !== id))
+    setSelectedActId((cur) => (cur === id ? null : cur))
   }, [])
+  const selectAct = useCallback((id: string | null) => setSelectedActId(id), [])
 
   // ---- 章节 ----
   const addChapter = useCallback((actId?: string) => {
@@ -265,7 +373,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const importShots = useCallback((chapterId: string, items: (Omit<Shot, 'id' | 'chapterId' | 'index'> & { id?: string })[]) => {
     // 1. Gather scene and character names that need auto-creation in Library
     const addedAssets: AssetItem[] = []
-    
+
     items.forEach((item) => {
       // Scene auto-creation
       if (item.scene) {
