@@ -1,0 +1,4 @@
+可灵
+https://klingai.com/document-api/apiReference/commonInfo
+Access Key: AG9TLpkAhdA9J9gr99rke98EApGAEL3r
+Secret Key: AtYfgEkR9CpphACyHBfJfKaFLKmfaTGa
