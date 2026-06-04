@@ -1,7 +1,6 @@
 import { createContext, useContext, useState, useCallback } from 'react'
 import type { GenerateTask, GenerateTaskType } from '../types/project'
-
-const uid = () => Math.random().toString(36).slice(2, 10)
+import { uid } from '../utils/uid'
 
 interface GenerateState {
   tasks: GenerateTask[]

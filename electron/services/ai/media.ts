@@ -21,7 +21,8 @@ export interface MediaGenerateResult {
   url?: string
 }
 
-function extFromContentType(contentType: string, fallback: string): string {
+/** @internal */
+export function extFromContentType(contentType: string, fallback: string): string {
   if (contentType.includes('png')) return '.png'
   if (contentType.includes('jpeg') || contentType.includes('jpg')) return '.jpg'
   if (contentType.includes('webp')) return '.webp'
@@ -98,7 +99,8 @@ async function getJSON(url: string, apiKey: string): Promise<unknown> {
   return JSON.parse(text)
 }
 
-function pickUrl(value: unknown): string | undefined {
+/** @internal */
+export function pickUrl(value: unknown): string | undefined {
   const obj = value as Record<string, unknown>
   const data = obj.data as unknown[] | undefined
   const first = data?.[0] as Record<string, unknown> | undefined
@@ -108,7 +110,8 @@ function pickUrl(value: unknown): string | undefined {
     ?? ((obj.result as Record<string, unknown> | undefined)?.url as string | undefined)
 }
 
-function pickTaskId(value: unknown): string | undefined {
+/** @internal */
+export function pickTaskId(value: unknown): string | undefined {
   const obj = value as Record<string, unknown>
   return (obj.id as string | undefined)
     ?? (obj.task_id as string | undefined)
@@ -116,7 +119,8 @@ function pickTaskId(value: unknown): string | undefined {
     ?? ((obj.data as Record<string, unknown> | undefined)?.task_id as string | undefined)
 }
 
-function pickStatus(value: unknown): string {
+/** @internal */
+export function pickStatus(value: unknown): string {
   const obj = value as Record<string, unknown>
   return String(obj.status ?? (obj.data as Record<string, unknown> | undefined)?.status ?? '')
 }
@@ -139,7 +143,8 @@ async function pollTask(base: string, apiKey: string, taskId: string, fallbackEx
 
 import * as crypto from 'node:crypto'
 
-function base64UrlEncode(str: string | Buffer): string {
+/** @internal */
+export function base64UrlEncode(str: string | Buffer): string {
   const buf = typeof str === 'string' ? Buffer.from(str) : str
   return buf.toString('base64')
     .replace(/=/g, '')
@@ -147,7 +152,8 @@ function base64UrlEncode(str: string | Buffer): string {
     .replace(/\//g, '_')
 }
 
-function generateKlingJWT(accessKey: string, secretKey: string): string {
+/** @internal */
+export function generateKlingJWT(accessKey: string, secretKey: string): string {
   const header = {
     alg: 'HS256',
     typ: 'JWT'

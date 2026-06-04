@@ -38,7 +38,9 @@ function createWindow(): void {
 
   if (isDev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
-    mainWindow.webContents.openDevTools({ mode: 'detach' })
+    if (process.env['LUMEN_DEV_TOOLS'] !== '0') {
+      mainWindow.webContents.openDevTools({ mode: 'detach' })
+    }
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
@@ -46,13 +48,22 @@ function createWindow(): void {
 
 app.whenReady().then(async () => {
   await initDataPaths()
+  const allowedMediaRoot = path.join(app.getPath('userData'), 'projects')
+  const allowedGeneratedRoot = path.join(app.getPath('userData'), 'generated')
+
   protocol.handle('lumen-media', async (request) => {
     try {
       // raw URL: lumen-media:///C:/Users/... or lumen-media:///C%3A/Users/...
       let filePath = decodeURIComponent(request.url.replace(/^lumen-media:\/\/\/?/, ''))
       // Normalise forward slashes
       filePath = filePath.replace(/\//g, path.sep)
-      const fileUrl = pathToFileURL(filePath)
+      // Resolve to absolute and block path traversal
+      const resolved = path.resolve(filePath)
+      if (!resolved.startsWith(allowedMediaRoot) && !resolved.startsWith(allowedGeneratedRoot)) {
+        console.warn('[lumen-media] blocked path outside allowed roots:', resolved)
+        return new Response('Forbidden', { status: 403, headers: { 'Content-Type': 'text/plain' } })
+      }
+      const fileUrl = pathToFileURL(resolved)
       console.log('[lumen-media]', request.url, '->', fileUrl.href)
       return await net.fetch(fileUrl.href)
     } catch (err) {

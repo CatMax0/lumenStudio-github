@@ -1,12 +1,14 @@
 const crypto = require('node:crypto');
 
-const appId = '6ae742c7';
-const apiKey = 'ec51aded327c688d40e19336f7173af8';
+const appId = process.env.XUNFEI_APP_ID;
+const apiKey = process.env.XUNFEI_API_KEY;
+const apiSecret = process.env.XUNFEI_API_SECRET;
+if (!appId || !apiKey || !apiSecret) {
+  console.error('Set XUNFEI_APP_ID, XUNFEI_API_KEY, XUNFEI_API_SECRET env vars');
+  process.exit(1);
+}
 
-const secretsToTry = [
-  'Mjc0YzFkOWE2NTlmNzJmMjYxYTYyNjNk', // Raw string as entered
-  Buffer.from('Mjc0YzFkOWE2NTlmNzJmMjYxYTYyNjNk', 'base64').toString('utf8') // Base64 decoded
-];
+const secretsToTry = [apiSecret];
 
 const requestUrl = 'https://maas-api.cn-huabei-1.xf-yun.com/v2.1/tti';
 const model = 'xopqwentti20b';

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useProject } from '../store/project'
 import { useStage } from '../store/stage'
+import { formatDate } from '../utils/formatDate'
 import type { ProjectMetaT } from '@shared/ipc'
 
 export function ProjectsWorkspace() {
@@ -62,7 +63,7 @@ export function ProjectsWorkspace() {
 
   const handleDelete = async (id: string, name: string, e: React.MouseEvent) => {
     e.stopPropagation() // prevent opening the project on card click
-    const confirmed = window.confirm(`⚠️ 确认要删除项目「${name}」吗？\n\n注意：此操作不可逆，将物理删除该项目的工程文件、剧本配置和专属生图素材文件夹！`)
+    const confirmed = window.confirm(`确认要删除项目「${name}」吗？\n\n注意：此操作不可逆，将物理删除该项目的工程文件、剧本配置和专属生图素材文件夹！`)
     if (!confirmed) return
 
     try {
@@ -86,10 +87,7 @@ export function ProjectsWorkspace() {
     }
   }
 
-  const formatDate = (ts: number) => {
-    const d = new Date(ts)
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-  }
+
 
   return (
     <div className="flex-1 overflow-auto bg-panel-deep p-6 md:p-8 flex justify-center select-text">
@@ -97,8 +95,8 @@ export function ProjectsWorkspace() {
         {/* Splash Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-line pb-6">
           <div className="space-y-1">
-            <h1 className="text-xl md:text-2xl font-bold font-mono tracking-[0.2em] text-ink flex items-center gap-2">
-              <span>🎬</span> LUMEN STUDIO
+            <h1 className="text-xl md:text-2xl font-bold font-mono tracking-[0.2em] text-ink">
+              LUMEN STUDIO
             </h1>
             <p className="text-xs text-ink-dim font-medium">微剧本与 AI 视频分镜智能工作站 · 专业级项目管理器</p>
           </div>
@@ -107,7 +105,7 @@ export function ProjectsWorkspace() {
             className="self-start md:self-center h-8 px-3 bg-panel border border-line hover:bg-panel-hover text-2xs text-ink rounded-sm flex items-center gap-1.5 transition-colors font-medium cursor-pointer"
             title="打开本地项目文件夹物理路径"
           >
-            <span>📁</span> 打开工程根目录
+            打开工程根目录
           </button>
         </div>
 
@@ -123,8 +121,8 @@ export function ProjectsWorkspace() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Left Column: Create Project */}
           <div className="md:col-span-1 bg-panel border border-line p-5 rounded-sm space-y-4 shadow-sm h-fit">
-            <h2 className="text-xs font-bold text-ink flex items-center gap-1.5 border-b border-line/50 pb-2">
-              <span>✨</span> 新建微剧/项目
+            <h2 className="text-xs font-bold text-ink border-b border-line/50 pb-2">
+              新建项目
             </h2>
             <form onSubmit={handleCreate} className="space-y-3">
               <div className="space-y-1">
@@ -144,15 +142,15 @@ export function ProjectsWorkspace() {
                 disabled={loading || !newProjectName.trim()}
                 className="w-full h-8 bg-accent text-white text-xs hover:bg-accent/80 disabled:opacity-50 disabled:cursor-not-allowed font-semibold rounded-sm transition-colors cursor-pointer"
               >
-                {loading ? '正在初始化项目...' : '🎬 立即新建项目'}
+                {loading ? '正在初始化项目...' : '立即新建项目'}
               </button>
             </form>
           </div>
 
           {/* Right Column: Recent Projects */}
           <div className="md:col-span-2 bg-panel border border-line p-5 rounded-sm space-y-4 shadow-sm">
-            <h2 className="text-xs font-bold text-ink flex items-center gap-1.5 border-b border-line/50 pb-2">
-              <span>🗂️</span> 最近打开的剧本工程
+            <h2 className="text-xs font-bold text-ink border-b border-line/50 pb-2">
+              最近打开的剧本工程
             </h2>
 
             <div className="space-y-2 max-h-[480px] overflow-y-auto pr-1">
@@ -173,7 +171,9 @@ export function ProjectsWorkspace() {
                       } rounded-sm flex items-center justify-between gap-4 transition-all duration-150 cursor-pointer`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <span className="text-xl shrink-0 select-none">🎬</span>
+                        <span className="w-9 h-9 shrink-0 rounded-sm bg-panel border border-line flex items-center justify-center text-xs font-mono text-ink-mute select-none uppercase">
+                          {p.name.slice(0, 2)}
+                        </span>
                         <div className="min-w-0 space-y-0.5">
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-ink group-hover:text-accent transition-colors truncate">

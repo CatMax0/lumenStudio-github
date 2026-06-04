@@ -30,15 +30,11 @@ function WorldBuildingNav() {
     <>
       <PanelHeader title="故事背景" />
       <div className="flex-1 overflow-auto py-1">
-        <Section label="基础设定" />
-        <Row indent={1}>世界观 / 梗概</Row>
+        <Section label="必要设置" />
+        <Row indent={1}>故事梗概</Row>
+        <Row indent={1}>题材 / 节奏</Row>
+        <Row indent={1}>总集数 / 单集时长</Row>
         <Row indent={1}>角色设定</Row>
-        <Row indent={1}>人物关系</Row>
-        <Row indent={1}>道具 / 场景</Row>
-        <Section label="创作规则" />
-        <Row indent={1}>文风 / 叙事</Row>
-        <Row indent={1}>镜头规则</Row>
-        <Row indent={1}>禁止词 / 节奏</Row>
       </div>
       <PanelDivider />
       <AssetLibraryMini />

@@ -4,6 +4,7 @@ import { MODEL_KIND_LABELS } from '../types/project'
 import type { ModelKind, ModelProvider } from '../types/project'
 import { PROVIDER_TEMPLATES } from '../data/providerTemplates'
 import { chatCompletion } from '../services/ai'
+import { NavItem, SectionLabel, Field } from './ui'
 
 const KINDS: ModelKind[] = ['llm', 'image', 'tts', 'stt', 'video', 'translate']
 
@@ -576,36 +577,4 @@ function GeneralSettings() {
   )
 }
 
-// ===== 通用组件 =====
-function NavItem({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className={[
-        'h-9 flex items-center px-4 text-xs text-left border-l-2 transition-colors',
-        active
-          ? 'bg-accent/10 text-ink border-l-accent font-semibold'
-          : 'text-ink-mute hover:bg-panel-hover hover:text-ink border-l-transparent'
-      ].join(' ')}
-    >
-      {label}
-    </button>
-  )
-}
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="px-4 pt-4 pb-1 text-2xs text-ink-dim tracking-wide font-bold">
-      {children}
-    </div>
-  )
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="text-xs font-semibold text-ink-dim mb-1.5">{label}</div>
-      {children}
-    </div>
-  )
-}
