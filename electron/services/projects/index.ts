@@ -175,6 +175,9 @@ export async function listBackups(id: string): Promise<BackupMetaT[]> {
 }
 
 export async function restoreBackup(id: string, backupId: string): Promise<void> {
+  if (!/^[A-Za-z0-9_-]+$/.test(backupId)) {
+    throw new Error(`非法 backupId: ${backupId}`)
+  }
   const backupFile = path.join(getProjectDir(id), BACKUP_DIR, `${backupId}.json`)
   if (!(await fileExists(backupFile))) throw new Error('备份不存在')
   // 先把当前文件做一次自动备份

@@ -2,7 +2,8 @@ const http = require('http');
 const https = require('https');
 const url = require('url');
 
-const apiKey = 'AIzaSyAo6GMrr3XaOo_kzUL1IcGxLrJVAeOyFHw';
+const apiKey = process.env.GEMINI_API_KEY;
+if (!apiKey) { console.error('Set GEMINI_API_KEY env var'); process.exit(1); }
 const targetUrl = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 
 // We can try connecting directly (as the user might have global VPN/TUN turned on now)

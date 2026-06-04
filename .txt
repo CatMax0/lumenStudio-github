@@ -1,4 +1,4 @@
 可灵
 https://klingai.com/document-api/apiReference/commonInfo
-Access Key: AG9TLpkAhdA9J9gr99rke98EApGAEL3r
-Secret Key: AtYfgEkR9CpphACyHBfJfKaFLKmfaTGa
+Access Key: <set KLING_ACCESS_KEY env var>
+Secret Key: <set KLING_SECRET_KEY env var>

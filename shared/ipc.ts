@@ -60,6 +60,10 @@ export const ProjectSaveResponse = z.object({
 export type ProjectSaveResponseT = z.infer<typeof ProjectSaveResponse>
 
 export const ProjectLoadRequest = z.object({ id: z.string() })
+export const ProjectRestoreBackupRequest = z.object({
+  id: z.string(),
+  backupId: z.string()
+})
 export const ProjectLoadResponse = z.object({
   meta: ProjectMeta,
   data: z.unknown()
