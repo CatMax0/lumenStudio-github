@@ -5,9 +5,11 @@ release
 .vite
 *.log
 .DS_Store
-# .env
-# .env.local
-# .env.*.local
+.env
+.env.local
+.env.*.local
+*.secrets
+.txt
 .idea
 .vscode/*
 !.vscode/extensions.json

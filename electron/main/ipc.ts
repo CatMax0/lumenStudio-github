@@ -4,6 +4,7 @@ import {
   PingRequest,
   ProjectSaveRequest,
   ProjectLoadRequest,
+  ProjectRestoreBackupRequest,
   AiChatRequest,
   AiChatStreamRequest,
   AiGenerateMediaRequest,
@@ -73,8 +74,9 @@ export function registerIpc(): void {
 
   ipcMain.handle(
     Channels.ProjectRestoreBackup,
-    async (_evt, raw: { id: string; backupId: string }) => {
-      await restoreBackup(raw.id, raw.backupId)
+    async (_evt, raw) => {
+      const { id, backupId } = ProjectRestoreBackupRequest.parse(raw)
+      await restoreBackup(id, backupId)
       return { ok: true }
     }
   )
